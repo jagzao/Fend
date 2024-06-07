@@ -1,10 +1,5 @@
 <template>
   <v-container>
-    <template>
-      <v-treeview :items="itemsTree"></v-treeview>
-    </template>
-
-
     <v-btn
       class="mb-2"
       color="primary"
@@ -26,15 +21,8 @@
         <v-icon v-else>mdi-file</v-icon>
       </template>
       <template v-slot:label="{ item }">
-        <v-text-field
-          v-if="editId === item.id"
-          v-model="editName"
-          @keydown.enter="updateItem"
-          @keydown.esc="cancelEdit"
-          dense
-        ></v-text-field>
-        <span v-else @dblclick="editItem(item)">
-          {{ item.name }}
+        <span @dblclick="editItem(item)">
+          {{ item.title }}
         </span>
       </template>
       <template v-slot:append="{ item }">
@@ -50,12 +38,6 @@
           @click="deleteItem(item)"
         >
           mdi-delete
-        </v-icon>
-        <v-icon
-          small
-          @click="openUploadDialog(item)"
-        >
-          mdi-upload
         </v-icon>
       </template>
     </v-treeview>
@@ -75,12 +57,15 @@
                 ></v-text-field>
               </v-col>
               <v-col cols="12">
-                <v-text-field
+                <v-select
+                  :items="parentOptions"
                   v-model="formData.parentId"
+                  item-title="name"
+                  item-value="id"
                   label="ID del padre"
-                ></v-text-field>
-              </v-col>              
-              <v-col cols="12">
+                ></v-select>
+              </v-col>
+              <v-col cols="12" v-if="!formData.isDirectory">
                 <v-file-input
                   v-model="file"
                   label="Selecciona un archivo"
@@ -118,89 +103,20 @@ export default {
   },
   data() {
     return {
-      itemsTree: [
-        {
-          id: 1,
-          title: 'Applications :',
-          children: [
-            { id: 2, title: 'Calendar : app' },
-            { id: 3, title: 'Chrome : app' },
-            { id: 4, title: 'Webstorm : app' },
-          ],
-        },
-        {
-          id: 5,
-          title: 'Documents :',
-          children: [
-            {
-              id: 6,
-              title: 'vuetify :',
-              children: [
-                {
-                  id: 7,
-                  title: 'src :',
-                  children: [
-                    { id: 8, title: 'index : ts' },
-                    { id: 9, title: 'bootstrap : ts' },
-                  ],
-                },
-              ],
-            },
-            {
-              id: 10,
-              title: 'material2 :',
-              children: [
-                {
-                  id: 11,
-                  title: 'src :',
-                  children: [
-                    { id: 12, title: 'v-btn : ts' },
-                    { id: 13, title: 'v-card : ts' },
-                    { id: 14, title: 'v-window : ts' },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: 15,
-          title: 'Downloads :',
-          children: [
-            { id: 16, title: 'October : pdf' },
-            { id: 17, title: 'November : pdf' },
-            { id: 18, title: 'Tutorial : html' },
-          ],
-        },
-        {
-          id: 19,
-          title: 'Videos :',
-          children: [
-            {
-              id: 20,
-              title: 'Tutorials :',
-              children: [
-                { id: 21, title: 'Basic layouts : mp4' },
-                { id: 22, title: 'Advanced techniques : mp4' },
-                { id: 23, title: 'All about app : dir' },
-              ],
-            },
-            { id: 24, title: 'Intro : mov' },
-            { id: 25, title: 'Conference introduction : avi' },
-          ],
-        },
-      ],
       open: [],
       dialog: false,
       formData: {
         id: 0,
         name: '',
-        parentId: '',
+        parentId: 0,
         isDirectory: false,
-        children: []
+        children: [],
+        fileSize: 0,
       },
+      file: null,
       editId: null,
       editName: '',
+      parentOptions: [],
     };
   },
   computed: {
@@ -208,32 +124,48 @@ export default {
       return this.formData.id ? 'Editar Archivo/Directorio' : 'Crear Archivo/Directorio';
     }
   },
+  watch: {
+    treeItems: {
+      handler(newTreeItems) {
+        this.parentOptions = this.generateParentOptions(newTreeItems);
+      },
+      immediate: true
+    }
+  },
   methods: {
     openDialog(item) {
       if (item) {
         this.formData = { ...item };
+        this.formData.name = item.title;
+        this.formData.parentId = item.parentId || '';
       } else {
         this.formData = {
           id: 0,
+          fileSize: 0,
           name: '',
-          parentId: '',
+          parentId: 0,
           isDirectory: false,
           children: []
         };
       }
       this.dialog = true;
     },
-    openUploadDialog(item) {
-      this.$refs.uploadFileDialog.parentId = item ? item.id : '';
-      this.$refs.uploadFileDialog.open();
-    },
     async saveItem() {
       try {
-        console.log(`🚀 ~ saveItem ~ this.formData:`, this.formData)
+        const formData = new FormData();
+        formData.append('name', this.formData.name);
+        formData.append('parentId', this.formData.parentId);
+        formData.append('isDirectory', this.formData.isDirectory);
+        formData.append('children', this.formData.children);
+
+        if (!this.formData.isDirectory && this.file) {
+          formData.append('File', this.file);
+        }
+
         if (this.formData.id) {
-          await api.updateFile(this.formData.id, this.formData);
+          await api.updateFile(formData);
         } else {
-          const response = await api.createFile(this.formData);
+          const response = await api.createFile(formData);
           this.formData.id = response.data.id;
           if (this.formData.parentId) {
             const parent = this.findItem(this.treeItems, this.formData.parentId);
@@ -245,6 +177,7 @@ export default {
           }
         }
         this.dialog = false;
+        this.$emit('fetchTreeData');
       } catch (error) {
         console.error('Error guardando el archivo:', error);
       }
@@ -253,6 +186,7 @@ export default {
       try {
         await api.deleteFile(item.id);
         this.removeItem(this.treeItems, item.id);
+        this.$emit('fetchTreeData');
       } catch (error) {
         console.error('Error eliminando el item:', error);
       }
@@ -272,6 +206,10 @@ export default {
     editItem(item) {
       this.editId = item.id;
       this.editName = item.name;
+      this.openDialog(item);
+    },
+    handleOpenChange(open) {
+      this.open = open;
     },
     async updateItem() {
       try {
@@ -282,13 +220,20 @@ export default {
         }
         this.editId = null;
         this.editName = '';
+        this.$emit('tree-updated');
       } catch (error) {
         console.error('Error actualizando el item:', error);
       }
     },
-    cancelEdit() {
-      this.editId = null;
-      this.editName = '';
+    closeDialog() {
+      this.dialog = false;
+      this.formData = {
+        id: null,
+        name: '',
+        parentId: 0,
+        isDirectory: false,
+        children: []
+      };
     },
     findItem(items, id) {
       for (const item of items) {
@@ -304,21 +249,18 @@ export default {
       }
       return null;
     },
-    handleActiveChange(active) {
-      // Manejar cambios en elementos activos
-    },
-    handleOpenChange(open) {
-      this.open = open;
-    },
-    closeDialog() {
-      this.dialog = false;
-      this.formData = {
-        id: null,
-        name: '',
-        parentId: '',
-        isDirectory: false,
-        children: []
+    generateParentOptions(items) {
+      const options = [];
+      const traverse = (items) => {
+        for (const item of items) {
+          options.push({ id: item.id, name: item.title });
+          if (item.children && item.children.length) {
+            traverse(item.children);
+          }
+        }
       };
+      traverse(items);
+      return options;
     }
   }
 };

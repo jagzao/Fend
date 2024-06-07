@@ -1,13 +1,14 @@
 import axios from 'axios';
 
 const API_URL = 'https://localhost:7257/api/';
+const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdHJpbmciLCJqdGkiOiI2OGE3NDA5OC0xOTEyLTRhZWQtYjkxOS0xYzM5YjczNDcxMWQiLCJleHAiOjE3MTc2ODM4MzB9._2b7qr8dwzu7MePVGtRihQ9yIxdyCjDy5DZmTah8zUU'
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${localStorage.getItem('token')}`,
-    'X-Api-Key': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdHJpbmciLCJqdGkiOiI2OGE3NDA5OC0xOTEyLTRhZWQtYjkxOS0xYzM5YjczNDcxMWQiLCJleHAiOjE3MTc2ODM4MzB9._2b7qr8dwzu7MePVGtRihQ9yIxdyCjDy5DZmTah8zUU'
+    'X-Api-Key': API_KEY
   }
 });
 
@@ -31,13 +32,37 @@ export default {
   getTree() {
     return api.get('/Files');
   },
-  createFile(data) {
-    return api.post('/Files', data);
+  createFile(formData) {
+    return api.post('Files/upload-stream', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'X-Api-Key': API_KEY
+      }
+    });
   },
-  updateFile(data) {
-    return api.put(`/Files`, data);
+  updateFile(formData) {
+    return api.put(`Files/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'X-Api-Key': API_KEY
+      }
+    });
   },
   deleteFile(id) {
-    return api.delete(`/Files/${id}`);
+    return api.delete(`Files/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'X-Api-Key': API_KEY
+      }
+    });
+  },
+
+  generateReport(startDate, endDate) {
+    return api.get('Report/generate', { params: { startDate, endDate } });
+  },
+  downloadReport(startDate, endDate) {
+    return api.get('Report/download', { params: { startDate, endDate }, responseType: 'blob' });
   }
 };

@@ -2,7 +2,7 @@
   <div>
     <h1>Tree View</h1>
     <v-container>
-      <TreeComponent :treeItems="treeItems"></TreeComponent>
+      <TreeComponent :treeItems="treeItems" @fetchTreeData="fetchTreeData"></TreeComponent>
     </v-container>
   </div>
 </template>
@@ -29,15 +29,26 @@ export default {
       try {
         let response = await api.getTree();
         if (response.data && response.data.length) {
-          this.treeItems = response.data;
+          this.treeItems = this.mapTreeItems(response.data);
         } else {
           response = await axios.get('/treeData.json');
-          this.treeItems = response.data;
-          console.log(`🚀 ~ fetchTreeData ~ this.treeItems:`, this.treeItems.length)
+          this.treeItems = this.mapTreeItems(response.data);
         }
       } catch (error) {
         console.error("Error obteniendo el árbol:", error);
       }
+    },
+    mapTreeItems(items) {
+      return items.map(item => {
+        const mappedItem = {
+          id: item.id,
+          title: item.name,
+          parentId: item.parentId,
+          isDirectory: item.isDirectory,
+          children: item.children ? this.mapTreeItems(item.children) : undefined
+        };
+        return mappedItem;
+      });
     }
   }
 };

@@ -1,35 +1,70 @@
 <template>
-  <div>
-    <h1>Report View</h1>
-    <v-container>
-      <v-btn @click="generateReport">Generate Report</v-btn>
-      <!-- Implement your report viewing logic here -->
-      <v-data-table :headers="reportHeaders" :items="reportItems" class="elevation-1"></v-data-table>
-    </v-container>
-  </div>
+  <v-container>
+    <v-form @submit.prevent="generateReport">
+      <v-row>
+        <v-col cols="12" md="6">
+          <v-text-field
+            v-model="startDate"
+            label="Fecha de inicio"
+            type="date"
+          ></v-text-field>
+        </v-col>
+        <v-col cols="12" md="6">
+          <v-text-field
+            v-model="endDate"
+            label="Fecha de fin"
+            type="date"
+          ></v-text-field>
+        </v-col>
+      </v-row>
+      <v-btn type="submit" color="primary">Generar Reporte</v-btn>
+    </v-form>
+    <v-data-table
+      :headers="headers"
+      :items="reportData"
+    ></v-data-table>
+    <v-btn @click="downloadReport" color="secondary">Descargar Reporte</v-btn>
+  </v-container>
 </template>
 
 <script>
+import api from '@/services/api';
+
 export default {
   data() {
     return {
-      reportHeaders: [
-        { text: 'ID', align: 'start', sortable: false, value: 'id' },
-        { text: 'Name', value: 'name' },
-        { text: 'Age', value: 'age' }
-      ],
-      reportItems: []
+      startDate: '',
+      endDate: '',
+      reportData: [],
+      headers: [
+        { text: 'ID', value: 'id' },
+        { text: 'Nombre', value: 'name' },
+        { text: 'Fecha', value: 'date' },
+        { text: 'Cantidad', value: 'amount' }
+      ]
     };
   },
   methods: {
-    generateReport() {
-      // Implement your report generation logic here
-      // For example, fetching data from an API
-      this.reportItems = [
-        { id: 1, name: 'Alice', age: 30 },
-        { id: 2, name: 'Bob', age: 25 },
-        { id: 3, name: 'Charlie', age: 35 }
-      ];
+    async generateReport() {
+      try {
+        const response = await api.generateReport(this.startDate, this.endDate);
+        this.reportData = response.data;
+      } catch (error) {
+        console.error('Error generando el reporte:', error);
+      }
+    },
+    async downloadReport() {
+      try {
+        const response = await api.downloadReport(this.startDate, this.endDate);
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'reporte.csv'); // o reporte.xlsx
+        document.body.appendChild(link);
+        link.click();
+      } catch (error) {
+        console.error('Error descargando el reporte:', error);
+      }
     }
   }
 };
