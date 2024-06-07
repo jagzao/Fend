@@ -1,0 +1,50 @@
+[
+  {
+    "id": "1",
+    "name": "Root",
+    "parentId": "",
+    "isDirectory": true,
+    "children": [
+      {
+        "id": "2",
+        "name": "Folder 1",
+        "parentId": "1",
+        "isDirectory": true,
+        "children": [
+          {
+            "id": "3",
+            "name": "File 1-1",
+            "parentId": "2",
+            "isDirectory": false
+          },
+          {
+            "id": "4",
+            "name": "File 1-2",
+            "parentId": "2",
+            "isDirectory": false
+          }
+        ]
+      },
+      {
+        "id": "5",
+        "name": "Folder 2",
+        "parentId": "1",
+        "isDirectory": true,
+        "children": [
+          {
+            "id": "6",
+            "name": "File 2-1",
+            "parentId": "5",
+            "isDirectory": false
+          }
+        ]
+      },
+      {
+        "id": "7",
+        "name": "File at root level",
+        "parentId": "1",
+        "isDirectory": false
+      }
+    ]
+  }
+]
